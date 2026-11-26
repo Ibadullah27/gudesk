@@ -1,0 +1,20 @@
+import { Router } from 'express';
+import { gradesController } from '../controllers/grades.controller.js';
+import { authenticate } from '../middleware/authenticate.js';
+import { requireRole } from '../middleware/requireRole.js';
+import { validate } from '../middleware/validate.js';
+import { gradebookQuerySchema } from '../schemas/grades.schemas.js';
+import rateLimit from 'express-rate-limit';
+import { profileController } from '../controllers/profile.controller.js';
+import { avatarPathSchema, avatarUploadSchema, profilePasswordSchema, updateProfileSchema } from '../schemas/profile.schemas.js';
+
+const router = Router();
+router.use(authenticate, requireRole('admin', 'teacher', 'student'));
+router.get('/marks', requireRole('student'), validate(gradebookQuerySchema, 'query'), gradesController.myMarks);
+router.get('/profile', profileController.view);
+router.patch('/profile', validate(updateProfileSchema), profileController.update);
+router.post('/profile/photo/upload-url', validate(avatarUploadSchema), profileController.uploadUrl);
+router.patch('/profile/photo', validate(avatarPathSchema), profileController.saveAvatar);
+router.delete('/profile/photo', profileController.removeAvatar);
+router.post('/profile/password', rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false }), validate(profilePasswordSchema), profileController.changePassword);
+export default router;
